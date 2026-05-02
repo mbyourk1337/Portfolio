@@ -185,8 +185,9 @@ async function fetchTree(repo: RepoSearchResult): Promise<TreeEntry[]> {
 }
 
 // Корневые файлы метаданных. Регистр игнорируется, расширение опционально.
-const DESC_RE = /^desc(\.(md|txt))?$/i;
-const NAME_RE = /^name(\.(md|txt))?$/i;
+// Поддерживаются: name, name.txt, name.md, name.text (и Name.TXT, NAME.md и т.п.)
+const DESC_RE = /^desc(\.(md|txt|text))?$/i;
+const NAME_RE = /^name(\.(md|txt|text))?$/i;
 
 async function fetchText(rawBase: string, path: string): Promise<string | null> {
   const res = await fetch(`${rawBase}/${path}`, { headers: headers() });

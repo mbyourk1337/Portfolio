@@ -30,6 +30,26 @@ const avatar = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/avatar.jpg`;
             <li>Москва</li>
             <li>Московский политех</li>
           </ul>
+          <ul class="contacts">
+            <li>
+              <a href="https://t.me/Mbyourd" target="_blank" rel="noopener">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m22 2-7 20-4-9-9-4Z" />
+                  <path d="M22 2 11 13" />
+                </svg>
+                @Mbyourd
+              </a>
+            </li>
+            <li>
+              <a href="mailto:mbyourk@gmail.com">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <path d="m2 6 10 7 10-7" />
+                </svg>
+                mbyourk@gmail.com
+              </a>
+            </li>
+          </ul>
         </div>
       </header>
 
@@ -74,7 +94,7 @@ const avatar = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/avatar.jpg`;
       </section>
 
       <footer class="bottom">
-        Собрано {buildDate} · {projects.length} проект(ов)
+        {buildDate} · {projects.length} проект(ов)
       </footer>
     </main>
   </body>
