@@ -1,66 +1,34 @@
 ---
-import type { Project, FileType } from '../lib/github';
+import type { Project } from '../lib/github';
 
 interface Props {
   project: Project;
 }
 
 const { project } = Astro.props;
-const fileLimit = 5;
-const visibleFiles = project.fileUrls?.slice(0, fileLimit) ?? [];
-const moreFiles = (project.fileUrls?.length ?? 0) - visibleFiles.length;
-
-const TYPE_ICON: Record<FileType, string> = {
-  pdf: '📄',
-  docx: '📝',
-  archive: '🗜',
-  model: '🧊',
-  image: '🖼',
-  video: '🎬',
-  other: '📎',
-};
+const cover = project.images[0]?.url;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const href = `${base}/projects/${project.slug}`;
+const fileCount = project.files.length;
+const photoCount = project.images.length;
 ---
 
 <article class="card">
-  <a href={project.repoUrl} target="_blank" rel="noopener">
+  <a href={href}>
     {
-      project.coverUrl ? (
-        <div class="cover" style={`background-image: url('${project.coverUrl}')`} />
+      cover ? (
+        <div class="cover" style={`background-image: url('${cover}')`} />
       ) : (
-        <div class="cover placeholder">нет обложки</div>
+        <div class="cover placeholder">нет фото</div>
       )
     }
     <div class="body">
       <h2>{project.title}</h2>
-      <div class="meta">
-        {project.year && <span>{project.year}</span>}
-        <span>{project.repo}</span>
-      </div>
       {project.description && <p class="desc">{project.description}</p>}
-
-      {
-        visibleFiles.length > 0 && (
-          <div class="files">
-            {visibleFiles.map((f) => (
-              <span class="file-pill">
-                <span class="file-ico">{TYPE_ICON[f.type ?? 'other']}</span>
-                {f.name}
-              </span>
-            ))}
-            {moreFiles > 0 && <span class="file-pill">+{moreFiles}</span>}
-          </div>
-        )
-      }
-
-      {
-        project.tags && project.tags.length > 0 && (
-          <div class="tags">
-            {project.tags.map((t) => (
-              <span class="tag">{t}</span>
-            ))}
-          </div>
-        )
-      }
+      <div class="counts">
+        {photoCount > 0 && <span>🖼 {photoCount} фото</span>}
+        {fileCount > 0 && <span>📎 {fileCount} файл(ов)</span>}
+      </div>
     </div>
   </a>
 </article>

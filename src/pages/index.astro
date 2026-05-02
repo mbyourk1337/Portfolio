@@ -33,21 +33,45 @@ const avatar = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/avatar.jpg`;
         </div>
       </header>
 
-      {
-        projects.length === 0 ? (
-          <div class="empty">
-            Пока нет проектов. Создайте репо с топиком{' '}
-            <code>portfolio-project</code> и файлом <code>project.json</code> — он появится здесь
-            после следующего билда.
-          </div>
-        ) : (
-          <section class="grid">
-            {projects.map((p) => (
-              <ProjectCard project={p} />
-            ))}
-          </section>
-        )
-      }
+      <section class="experience">
+        <h2>Опыт</h2>
+
+        <div class="exp-item">
+          <h3>Беспилотная платформа на базе электроквадроцикла</h3>
+          <p class="exp-meta">Командный проект · 2025 — наст. время</p>
+          <ul>
+            <li>Разработка 3D-моделей узлов и компонентов в Siemens NX</li>
+            <li>Проектирование компоновки системы: аккумулятор, электроника, крепления</li>
+            <li>Конструктивные решения для размещения оборудования</li>
+            <li>Сборка и тестирование прототипа</li>
+            <li>Анализ конструкции с точки зрения прочности и технологичности</li>
+          </ul>
+        </div>
+
+        <ul class="highlights">
+          <li>Реальный инженерный проект</li>
+          <li>Командная работа</li>
+          <li>Механические системы и транспортные решения</li>
+        </ul>
+      </section>
+
+      <section class="projects">
+        <h2 class="section-label">Проекты</h2>
+        {
+          projects.length === 0 ? (
+            <div class="empty">
+              Пока нет проектов. Создайте репо с топиком{' '}
+              <code>portfolio-project</code> — он подтянется сюда автоматически.
+            </div>
+          ) : (
+            <div class="grid">
+              {projects.map((p) => (
+                <ProjectCard project={p} />
+              ))}
+            </div>
+          )
+        }
+      </section>
 
       <footer class="bottom">
         Собрано {buildDate} · {projects.length} проект(ов)

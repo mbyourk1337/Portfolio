@@ -111,6 +111,92 @@ header.hero p {
   }
 }
 
+/* ── Experience section ─────────────────────────────────── */
+
+.experience {
+  margin: 0 0 3.5rem;
+}
+
+.experience > h2 {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.exp-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.6rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.exp-item h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.005em;
+}
+
+.exp-item .exp-meta {
+  margin: 0 0 1rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.exp-item ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.exp-item ul li {
+  position: relative;
+  padding-left: 1.25rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.exp-item ul li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--text-dim);
+}
+
+.highlights {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.highlights li {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-dim);
+}
+
+/* ── Projects grid ──────────────────────────────────────── */
+
+.section-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -175,51 +261,191 @@ header.hero p {
   margin: 0;
   color: var(--text-dim);
   font-size: 0.9rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.tags {
+.card .counts {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: auto;
-  padding-top: 0.4rem;
-}
-
-.tag {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.55rem;
-  background: var(--tag-bg);
-  color: var(--tag-text);
-  border-radius: 999px;
-  letter-spacing: 0.02em;
-}
-
-.files {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-}
-
-.file-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.72rem;
-  padding: 0.25rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  gap: 0.9rem;
+  font-size: 0.78rem;
   color: var(--text-dim);
+  margin-top: auto;
+  padding-top: 0.3rem;
 }
 
-.file-pill .file-ico {
+/* ── Project page ───────────────────────────────────────── */
+
+.project-page .back {
+  display: inline-block;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+}
+.project-page .back:hover {
+  color: var(--text);
+}
+
+.project-hero {
+  margin-bottom: 2.5rem;
+}
+.project-hero h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.6rem;
+}
+.project-hero .lead {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 0 0 0.8rem;
+  max-width: 70ch;
+}
+.project-hero .meta-row {
+  display: flex;
+  gap: 0.5rem;
+  color: var(--text-dim);
   font-size: 0.85rem;
+}
+.project-hero .meta-row a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* Carousel */
+.carousel {
+  position: relative;
+  margin: 0 0 3rem;
+  outline: none;
+}
+.carousel .strip {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+}
+.carousel .slide {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: block;
+}
+.carousel .slide img {
+  display: block;
+  max-height: 70vh;
+  max-width: 90vw;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+.carousel .nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(14, 14, 16, 0.85);
+  backdrop-filter: blur(6px);
+  color: var(--text);
+  font-size: 1.4rem;
+  cursor: pointer;
+  z-index: 2;
+  display: grid;
+  place-items: center;
   line-height: 1;
 }
-
-.file-pill:hover {
-  color: var(--text);
+.carousel .nav:hover {
+  background: var(--bg-hover);
   border-color: #4a4a55;
+}
+.carousel .nav.prev { left: 0.5rem; }
+.carousel .nav.next { right: 0.5rem; }
+@media (hover: none) {
+  .carousel .nav { display: none; }
+}
+
+/* Files list */
+.files-list h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.9rem;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.files-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.files-list li + li {
+  border-top: 1px solid var(--border);
+}
+.file-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  font-size: 0.92rem;
+  transition: background 0.15s ease;
+}
+.file-row:hover {
+  background: var(--bg-hover);
+}
+.file-row-ico {
+  font-size: 1.05rem;
+  text-align: center;
+}
+.file-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-row-type {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.file-row-size {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+  text-align: right;
+}
+.files-list .hint {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0;
+}
+.files-list .hint a {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+@media (max-width: 540px) {
+  .file-row {
+    grid-template-columns: 28px 1fr auto;
+  }
+  .file-row-type {
+    display: none;
+  }
 }
 
 footer.bottom {

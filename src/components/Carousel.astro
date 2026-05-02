@@ -1,0 +1,52 @@
+---
+import type { ProjectImage } from '../lib/github';
+
+interface Props {
+  images: ProjectImage[];
+}
+
+const { images } = Astro.props;
+---
+
+{
+  images.length > 0 && (
+    <div class="carousel" data-carousel>
+      <button class="nav prev" aria-label="Назад" data-prev>‹</button>
+      <div class="strip" data-strip>
+        {images.map((img, i) => (
+          <a class="slide" href={img.url} target="_blank" rel="noopener" aria-label={`Открыть ${img.alt}`}>
+            <img src={img.url} alt={img.alt} loading={i === 0 ? 'eager' : 'lazy'} />
+          </a>
+        ))}
+      </div>
+      <button class="nav next" aria-label="Вперёд" data-next>›</button>
+    </div>
+  )
+}
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-carousel]').forEach((root) => {
+    const strip = root.querySelector<HTMLElement>('[data-strip]');
+    if (!strip) return;
+    const prev = root.querySelector<HTMLButtonElement>('[data-prev]');
+    const next = root.querySelector<HTMLButtonElement>('[data-next]');
+    const step = () => Math.round(strip.clientWidth * 0.9);
+    prev?.addEventListener('click', () =>
+      strip.scrollBy({ left: -step(), behavior: 'smooth' }),
+    );
+    next?.addEventListener('click', () =>
+      strip.scrollBy({ left: step(), behavior: 'smooth' }),
+    );
+    // Стрелочки на клавиатуре, когда фокус на карусели.
+    root.tabIndex = 0;
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        strip.scrollBy({ left: -step(), behavior: 'smooth' });
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        strip.scrollBy({ left: step(), behavior: 'smooth' });
+      }
+    });
+  });
+</script>

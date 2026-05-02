@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   # 1. Пуш в master-репо
   push:
-    branches: [main]
+    branches: [master, main]
   # 2. Ручной запуск из вкладки Actions
   workflow_dispatch:
   # 3. Триггер из проект-репо (см. PROJECT_TEMPLATE/README.md)

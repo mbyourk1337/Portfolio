@@ -1,94 +1,145 @@
-# portfolio-master
+# Portfolio
 
-Master-репозиторий, который агрегирует проекты из других ваших GitHub-репо
-и публикует портфолио через GitHub Pages.
+Master-репозиторий, который собирает портфолио из других ваших GitHub-репо
+и публикует через GitHub Pages по адресу
+**https://mbyourk1337.github.io/Portfolio/**
 
-**Как это работает:**
-1. Каждый проект живёт в своём репозитории (PDF, архивы, 3D-модели и т.п.).
-2. Каждому такому репо вы ставите топик `portfolio-project` и кладёте в корень `project.json`.
-3. GitHub Action в этом master-репо при сборке через GitHub API находит все ваши репо
-   с этим топиком, читает `project.json` и генерирует статичный сайт с карточками.
-4. Большие файлы остаются в исходных репо — карточки на них только ссылаются,
-   ничего не дублируется.
+## Как это работает
 
-Шаблон, как оформить проект-репо, лежит в [`PROJECT_TEMPLATE/`](./PROJECT_TEMPLATE/).
+1. Каждый проект — отдельный репозиторий. Складываете туда что угодно:
+   фото, чертежи, PDF, DOCX, CAD-модели, видео, архивы — структура
+   произвольная.
+2. Ставите репо топик `portfolio-project` и заполняете поле **About** на GitHub
+   (это и будет описанием карточки).
+3. Master-репо при сборке через GitHub API находит все ваши репо с этим топиком,
+   читает дерево файлов и генерирует:
+   - на главной — карточку с обложкой (первое фото) и описанием из About;
+   - на странице проекта — карусель из всех картинок и список всех остальных
+     файлов со ссылками на скачивание.
+
+Никаких `project.json` или метаданных в репо складывать не нужно — всё берётся
+из GitHub.
 
 ---
 
-## Первичная настройка
-
-### 1. Создайте репозиторий из этой папки
+## Как добавить новый проект
 
 ```bash
-cd portfolio-master
-git init
+# 1. Завести папку для проекта (название = имя будущего репо на GitHub)
+mkdir my-new-project && cd my-new-project
+
+# 2. Положить внутрь что угодно: photos/, docs/, models/, video.mp4, drawing.pdf …
+#    Структуру делать удобно так:
+#      photos/   — фото и рендеры (имена с префиксом 01-, 02- задают порядок)
+#      docs/     — PDF, DOCX
+#      models/   — CAD: .SLDPRT .SLDASM .STEP .STL .DWG …
+#      videos/   — .mp4 .mov .webm
+#      archives/ — .zip полные пакеты
+#    Но это рекомендация, не требование.
+
+# 3. Запушить как новый публичный репо
+git init -b main
 git add .
-git commit -m "init portfolio master"
-gh repo create portfolio-master --public --source=. --push
+git commit -m "init"
+gh repo create my-new-project --public --source=. --push \
+  --description "Краткое описание, появится на карточке"
+
+# 4. Поставить топик
+gh repo edit --add-topic portfolio-project
+
+# 5. Триггернуть пересборку портфолио (или подождать ночной крон)
+gh workflow run "Deploy to GitHub Pages" -R mbyourk1337/Portfolio
 ```
 
-(или вручную через UI GitHub — имя `portfolio-master` или любое другое)
+Через ~1 минуту карточка появится на сайте. Картинки автоматически попадут в
+карусель, всё остальное — в список «Файлы» внизу страницы проекта.
 
-### 2. Поправьте `astro.config.mjs`
+### Как изменить описание проекта
 
-```js
-site: 'https://YOUR_USERNAME.github.io',
-base: '/portfolio-master',  // имя master-репо
+`gh repo edit my-new-project --description "Новый текст"` —
+или через UI: на странице репо `About → ⚙️`. На сайте обновится при следующем
+билде.
+
+### Как изменить порядок проектов
+
+Не нужно — отсортированы по дате последнего обновления, свежие сверху.
+Хотите вытащить проект наверх — сделайте в нём пуш (любой).
+
+### Как изменить порядок картинок в карусели
+
+Картинки сортируются по пути в репо. Префиксы `01-`, `02-` … работают как ожидается:
 ```
-
-Если вы хотите деплоить на корень `<username>.github.io`, назовите репо
-`<username>.github.io` и поставьте `base: '/'`.
-
-### 3. Включите GitHub Pages
-
-`Settings → Pages → Build and deployment → Source: GitHub Actions`
-
-### 4. (опционально) Задайте переменные
-
-`Settings → Secrets and variables → Actions → Variables`:
-- `PORTFOLIO_USERNAME` — если ваш аккаунт отличается от владельца репо
-- `PORTFOLIO_TOPIC` — если хотите другой топик вместо `portfolio-project`
-
-### 5. Положите фото в `public/avatar.jpg`
-
-Размер ~ 400×400 px, квадратное (обрежется в круг). Если используете другое
-имя/расширение — поменяйте путь в `src/pages/index.astro` (переменная `avatar`).
-
-### 6. Сделайте первый пуш
-
-Action запустится автоматически. Без проектов сайт покажет пустое состояние,
-но шапка с вашим именем и фото уже будет на месте.
+photos/01-cover.jpg
+photos/02-detail.jpg
+photos/03-render.jpg
+```
 
 ---
 
-## Локальный запуск
+## Лимиты
+
+- **100 МБ — максимум на один файл в обычном пуше.** Большие файлы заливайте
+  в **Releases** репо (до 2 ГБ на ассет) — они появятся в списке «Файлы»
+  только если положены в дерево репо. Для Releases-ассетов пока ставьте
+  ссылку в README или в About.
+- **5 ГБ мягкий / 100 ГБ жёсткий лимит на репо** — поэтому каждый проект
+  отдельный репо.
+- **GitHub Pages: 1 ГБ на сайт, 100 ГБ траффика/мес** — у master-репо
+  только HTML/CSS/JS, картинки и файлы остаются в проект-репо и грузятся
+  напрямую с raw.githubusercontent.com.
+
+---
+
+## Когда обновляется сайт
+
+- **Push в `main` master-репо** — сразу.
+- **Каждую ночь** в 03:17 UTC — подхватывает изменения проект-репо.
+- **Ручной запуск:** `Actions → Deploy to GitHub Pages → Run workflow`,
+  или из терминала:
+  ```bash
+  gh workflow run "Deploy to GitHub Pages" -R mbyourk1337/Portfolio
+  ```
+- **Авто-триггер из проект-репо** (опционально, чтобы не ждать кроном):
+  положите в проект-репо файл `.github/workflows/notify.yml`:
+
+  ```yaml
+  name: Notify portfolio
+  on:
+    push:
+      branches: [main]
+  jobs:
+    notify:
+      runs-on: ubuntu-latest
+      steps:
+        - env:
+            PAT: ${{ secrets.PORTFOLIO_DISPATCH_TOKEN }}
+          run: |
+            curl -sS -X POST \
+              -H "Authorization: Bearer $PAT" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/mbyourk1337/Portfolio/dispatches" \
+              -d '{"event_type":"project-updated"}'
+  ```
+
+  И положите в Settings → Secrets → Actions проект-репо секрет
+  `PORTFOLIO_DISPATCH_TOKEN` — Personal Access Token с правом `repo` на
+  master-репо.
+
+---
+
+## Локальная разработка master-репо
 
 ```bash
 npm install
 npm run dev
 ```
 
-Без `GITHUB_TOKEN` в env упрётесь в лимит 60 запросов/час. Чтобы не упираться:
-
+Без `GITHUB_TOKEN` упрётесь в лимит 60 запросов/час GitHub API. Для нормальной
+работы:
 ```bash
 echo 'GITHUB_TOKEN=ghp_xxx' > .env
-echo 'GITHUB_USERNAME=ваш_username' >> .env
 npm run dev
 ```
-
-Токен с правом `public_repo` (или вообще без скоупов для public-репо) получите
-в `Settings → Developer settings → Personal access tokens`.
-
----
-
-## Когда обновляется сайт
-
-- При пуше в `main` master-репо.
-- Каждую ночь в 03:17 UTC (cron).
-- При вызове `repository_dispatch` из проект-репо — настраивается в
-  [`PROJECT_TEMPLATE/`](./PROJECT_TEMPLATE/), чтобы карточка обновлялась сразу
-  после пуша в проект.
-- Вручную — `Actions → Deploy to GitHub Pages → Run workflow`.
 
 ---
 
@@ -96,15 +147,21 @@ npm run dev
 
 ```
 src/
-├── lib/github.ts        # фетчит репо и project.json через GitHub API
-├── components/          # ProjectCard.astro
-├── pages/index.astro    # главная страница с сеткой карточек
+├── lib/github.ts                    # фетч репо и дерева файлов
+├── components/
+│   ├── ProjectCard.astro            # карточка на главной
+│   └── Carousel.astro               # карусель картинок
+├── pages/
+│   ├── index.astro                  # главная — сетка карточек
+│   └── projects/[slug].astro        # страница проекта
 └── styles/global.css
 
-.github/workflows/deploy.yml   # билд + деплой
-PROJECT_TEMPLATE/              # как оформлять проект-репо
+.github/workflows/deploy.yml         # билд + деплой на Pages
 ```
 
-Расширить можно по вкусу: добавить детальные страницы (`src/pages/projects/[slug].astro`),
-фильтры по тегам, поиск, рендер README через `marked` — структура к этому
-готова, поля уже доступны в `Project`.
+---
+
+## Аватар в шапке
+
+Положите фото в `public/avatar.jpg` (квадрат, ~400×400). Если файл назван
+иначе — поправьте путь в `src/pages/index.astro:8`.

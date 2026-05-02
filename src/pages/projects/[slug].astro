@@ -1,0 +1,96 @@
+---
+import '../../styles/global.css';
+import Carousel from '../../components/Carousel.astro';
+import { loadProjects, type FileType } from '../../lib/github';
+
+export async function getStaticPaths() {
+  const projects = await loadProjects();
+  return projects.map((p) => ({
+    params: { slug: p.slug },
+    props: { project: p },
+  }));
+}
+
+const { project } = Astro.props;
+const home = import.meta.env.BASE_URL;
+
+const TYPE_ICON: Record<FileType, string> = {
+  pdf: '📄',
+  docx: '📝',
+  archive: '🗜',
+  model: '🧊',
+  image: '🖼',
+  video: '🎬',
+  other: '📎',
+};
+
+const TYPE_LABEL: Record<FileType, string> = {
+  pdf: 'PDF',
+  docx: 'DOCX',
+  archive: 'Архив',
+  model: 'Модель',
+  image: 'Картинка',
+  video: 'Видео',
+  other: 'Файл',
+};
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{project.title} — портфолио</title>
+    {project.description && <meta name="description" content={project.description} />}
+  </head>
+  <body>
+    <main class="container project-page">
+      <a class="back" href={home}>← все проекты</a>
+
+      <header class="project-hero">
+        <h1>{project.title}</h1>
+        {project.description && <p class="lead">{project.description}</p>}
+        <div class="meta-row">
+          <a href={project.repoUrl} target="_blank" rel="noopener">github.com/{project.repo}</a>
+          <span>·</span>
+          <span>обновлено {project.updatedAt.slice(0, 10)}</span>
+        </div>
+      </header>
+
+      {project.images.length > 0 && <Carousel images={project.images} />}
+
+      {
+        project.files.length > 0 && (
+          <section class="files-list">
+            <h2>Файлы ({project.files.length})</h2>
+            <ul>
+              {project.files.map((f) => (
+                <li>
+                  <a class="file-row" href={f.url} download>
+                    <span class="file-row-ico">{TYPE_ICON[f.type]}</span>
+                    <span class="file-row-name">{f.path}</span>
+                    <span class="file-row-type">{TYPE_LABEL[f.type]}</span>
+                    <span class="file-row-size">{f.sizeLabel}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p class="hint">
+              Если файл не скачивается напрямую (большие модели, нативные форматы) —{' '}
+              <a href={project.repoUrl} target="_blank" rel="noopener">откройте репозиторий</a>{' '}
+              и скачайте оттуда.
+            </p>
+          </section>
+        )
+      }
+
+      {
+        project.images.length === 0 && project.files.length === 0 && (
+          <div class="empty">
+            В репозитории пока нет файлов. Положите картинки и документы в любую папку — они подтянутся автоматически.
+          </div>
+        )
+      }
+    </main>
+  </body>
+</html>

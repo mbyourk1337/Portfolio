@@ -1,11 +1,6 @@
-// Подтягивает список проектов с GitHub во время build:
-//   1. Ищет все публичные репо пользователя с топиком PORTFOLIO_TOPIC
-//   2. Для каждого читает project.json из дефолтной ветки
-//   3. Возвращает массив отсортированных проектов
-//
-// GITHUB_USERNAME и PORTFOLIO_TOPIC задаются в .env или GitHub Action.
-// GITHUB_TOKEN опционален при локальной сборке (rate limit 60/час),
-// в Action он подставляется автоматически.
+// Тянет проекты с GitHub во время билда.
+// На входе ничего, кроме топика, не нужно: имя проекта = имя репо,
+// описание = description репо, картинки и файлы — всё что есть в дереве.
 
 const USERNAME = import.meta.env.GITHUB_USERNAME ?? 'mbyourk1337';
 const TOPIC = import.meta.env.PORTFOLIO_TOPIC ?? 'portfolio-project';
@@ -22,17 +17,11 @@ export type FileType =
   | 'video'
   | 'other';
 
-export interface ProjectFile {
-  name: string;
-  path: string;
-  type?: FileType;
-  size?: string;
-}
-
 const EXT_TO_TYPE: Record<string, FileType> = {
   pdf: 'pdf',
   doc: 'docx',
   docx: 'docx',
+  rtf: 'docx',
   zip: 'archive',
   rar: 'archive',
   '7z': 'archive',
@@ -41,6 +30,7 @@ const EXT_TO_TYPE: Record<string, FileType> = {
   skp: 'model',
   sldprt: 'model',
   sldasm: 'model',
+  slddrw: 'model',
   step: 'model',
   stp: 'model',
   iges: 'model',
@@ -57,6 +47,7 @@ const EXT_TO_TYPE: Record<string, FileType> = {
   jpeg: 'image',
   webp: 'image',
   gif: 'image',
+  avif: 'image',
   mp4: 'video',
   mov: 'video',
   webm: 'video',
@@ -65,41 +56,61 @@ const EXT_TO_TYPE: Record<string, FileType> = {
   mkv: 'video',
 };
 
-export function detectFileType(path: string): FileType {
-  const ext = path.split('.').pop()?.toLowerCase() ?? '';
-  return EXT_TO_TYPE[ext] ?? 'other';
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif']);
+
+// Файлы, которые НЕ показываем на странице (служебные / гитовые).
+const SKIP_NAMES = new Set([
+  '.gitignore',
+  '.gitkeep',
+  '.gitattributes',
+  '.editorconfig',
+  '.DS_Store',
+  'Thumbs.db',
+]);
+const SKIP_PREFIXES = ['.github/', '.vscode/', '.idea/'];
+
+export interface ProjectImage {
+  path: string;
+  url: string;
+  alt: string;
 }
 
-export interface ProjectMeta {
-  title: string;
-  description?: string;
-  tags?: string[];
-  year?: number;
-  cover?: string;
-  screenshots?: string[];
-  files?: ProjectFile[];
-  order?: number;
-  external?: { label: string; url: string }[];
+export interface ProjectFile {
+  path: string;
+  name: string;
+  type: FileType;
+  size: number;
+  sizeLabel: string;
+  url: string;
+  viewUrl: string;
 }
 
-export interface Project extends ProjectMeta {
+export interface Project {
+  slug: string;
   repo: string;
+  title: string;
+  description: string;
   repoUrl: string;
   defaultBranch: string;
-  rawBase: string;
   updatedAt: string;
-  coverUrl?: string;
-  screenshotUrls?: string[];
-  fileUrls?: (ProjectFile & { url: string })[];
+  images: ProjectImage[];
+  files: ProjectFile[];
 }
 
 interface RepoSearchResult {
   full_name: string;
   name: string;
+  description: string | null;
   html_url: string;
   default_branch: string;
   updated_at: string;
   topics: string[];
+}
+
+interface TreeEntry {
+  path: string;
+  type: 'blob' | 'tree';
+  size?: number;
 }
 
 function headers(): HeadersInit {
@@ -110,6 +121,38 @@ function headers(): HeadersInit {
   };
   if (TOKEN) h.Authorization = `Bearer ${TOKEN}`;
   return h;
+}
+
+function ext(path: string): string {
+  const dot = path.lastIndexOf('.');
+  return dot >= 0 ? path.slice(dot + 1).toLowerCase() : '';
+}
+
+function basename(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1);
+}
+
+function fmtSize(b: number | undefined): string {
+  if (!b && b !== 0) return '';
+  if (b < 1024) return `${b} Б`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} КБ`;
+  if (b < 1024 * 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} МБ`;
+  return `${(b / 1024 / 1024 / 1024).toFixed(2)} ГБ`;
+}
+
+function prettifyName(repo: string): string {
+  // motor-mount-or → "Motor mount or" (только заменяет разделители)
+  const s = repo.replace(/[-_]+/g, ' ').trim();
+  return s ? s[0].toUpperCase() + s.slice(1) : repo;
+}
+
+function shouldSkip(path: string): boolean {
+  if (SKIP_PREFIXES.some((p) => path.startsWith(p))) return true;
+  const name = basename(path);
+  if (SKIP_NAMES.has(name)) return true;
+  if (/^README\.[a-z]+$/i.test(name)) return true;
+  if (/^LICENSE(\.[a-z]+)?$/i.test(name)) return true;
+  return false;
 }
 
 async function searchRepos(): Promise<RepoSearchResult[]> {
@@ -124,26 +167,21 @@ async function searchRepos(): Promise<RepoSearchResult[]> {
   return json.items;
 }
 
-async function fetchProjectJson(
-  repo: RepoSearchResult,
-): Promise<ProjectMeta | null> {
-  const url = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}/project.json`;
+async function fetchTree(repo: RepoSearchResult): Promise<TreeEntry[]> {
+  const url = `${API}/repos/${repo.full_name}/git/trees/${repo.default_branch}?recursive=1`;
   const res = await fetch(url, { headers: headers() });
   if (!res.ok) {
-    console.warn(`[skip] ${repo.full_name}: project.json not found`);
-    return null;
+    console.warn(`[skip tree] ${repo.full_name}: ${res.status}`);
+    return [];
   }
-  try {
-    return (await res.json()) as ProjectMeta;
-  } catch (err) {
-    console.warn(`[skip] ${repo.full_name}: invalid project.json (${err})`);
-    return null;
+  const json = (await res.json()) as {
+    tree: TreeEntry[];
+    truncated: boolean;
+  };
+  if (json.truncated) {
+    console.warn(`[truncated] ${repo.full_name}: tree больше лимита, часть файлов не попадёт`);
   }
-}
-
-function rawUrl(rawBase: string, relPath: string): string {
-  if (/^https?:/i.test(relPath)) return relPath;
-  return `${rawBase}/${relPath.replace(/^\/+/, '')}`;
+  return json.tree.filter((e) => e.type === 'blob');
 }
 
 export async function loadProjects(): Promise<Project[]> {
@@ -151,37 +189,53 @@ export async function loadProjects(): Promise<Project[]> {
   const projects: Project[] = [];
 
   for (const repo of repos) {
-    const meta = await fetchProjectJson(repo);
-    if (!meta) continue;
-
+    const tree = await fetchTree(repo);
     const rawBase = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}`;
+    const blobBase = `${repo.html_url}/blob/${repo.default_branch}`;
+
+    const images: ProjectImage[] = [];
+    const files: ProjectFile[] = [];
+
+    for (const entry of tree) {
+      if (shouldSkip(entry.path)) continue;
+      const e = ext(entry.path);
+      if (IMAGE_EXTS.has(e)) {
+        images.push({
+          path: entry.path,
+          url: `${rawBase}/${entry.path}`,
+          alt: basename(entry.path),
+        });
+      } else {
+        files.push({
+          path: entry.path,
+          name: basename(entry.path),
+          type: EXT_TO_TYPE[e] ?? 'other',
+          size: entry.size ?? 0,
+          sizeLabel: fmtSize(entry.size),
+          url: `${rawBase}/${entry.path}`,
+          viewUrl: `${blobBase}/${entry.path}`,
+        });
+      }
+    }
+
+    images.sort((a, b) => a.path.localeCompare(b.path));
+    files.sort((a, b) => a.path.localeCompare(b.path));
 
     projects.push({
-      ...meta,
+      slug: repo.name,
       repo: repo.name,
+      title: prettifyName(repo.name),
+      description: repo.description ?? '',
       repoUrl: repo.html_url,
       defaultBranch: repo.default_branch,
-      rawBase,
       updatedAt: repo.updated_at,
-      coverUrl: meta.cover ? rawUrl(rawBase, meta.cover) : undefined,
-      screenshotUrls: meta.screenshots?.map((p) => rawUrl(rawBase, p)),
-      fileUrls: meta.files?.map((f) => ({
-        ...f,
-        type: f.type ?? detectFileType(f.path),
-        url: rawUrl(rawBase, f.path),
-      })),
+      images,
+      files,
     });
   }
 
-  // Сортировка: явный order по возрастанию, затем по году по убыванию,
-  // затем по дате последнего обновления.
-  projects.sort((a, b) => {
-    const ao = a.order ?? Number.POSITIVE_INFINITY;
-    const bo = b.order ?? Number.POSITIVE_INFINITY;
-    if (ao !== bo) return ao - bo;
-    if ((b.year ?? 0) !== (a.year ?? 0)) return (b.year ?? 0) - (a.year ?? 0);
-    return b.updatedAt.localeCompare(a.updatedAt);
-  });
+  // Сортировка: свежее обновлённые — выше.
+  projects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   return projects;
 }
