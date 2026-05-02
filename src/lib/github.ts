@@ -184,6 +184,21 @@ async function fetchTree(repo: RepoSearchResult): Promise<TreeEntry[]> {
   return json.tree.filter((e) => e.type === 'blob');
 }
 
+// Корневые файлы метаданных. Регистр игнорируется, расширение опционально.
+const DESC_RE = /^desc(\.(md|txt))?$/i;
+const NAME_RE = /^name(\.(md|txt))?$/i;
+
+async function fetchText(rawBase: string, path: string): Promise<string | null> {
+  const res = await fetch(`${rawBase}/${path}`, { headers: headers() });
+  if (!res.ok) return null;
+  const text = await res.text();
+  return text.trim() || null;
+}
+
+function firstLine(s: string): string {
+  return s.split(/\r?\n/, 1)[0].trim();
+}
+
 export async function loadProjects(): Promise<Project[]> {
   const repos = await searchRepos();
   const projects: Project[] = [];
@@ -193,11 +208,25 @@ export async function loadProjects(): Promise<Project[]> {
     const rawBase = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}`;
     const blobBase = `${repo.html_url}/blob/${repo.default_branch}`;
 
+    // Название: первая строка файла name / name.md / name.txt — иначе
+    // причёсанное имя репо. Описание: содержимое файла desc / desc.md / desc.txt
+    // целиком — иначе фолбэк на About.
+    const nameEntry = tree.find((e) => NAME_RE.test(e.path));
+    const descEntry = tree.find((e) => DESC_RE.test(e.path));
+
+    const nameContent = nameEntry ? await fetchText(rawBase, nameEntry.path) : null;
+    const descContent = descEntry ? await fetchText(rawBase, descEntry.path) : null;
+
+    const title = nameContent ? firstLine(nameContent) : prettifyName(repo.name);
+    const description = descContent ?? repo.description ?? '';
+
     const images: ProjectImage[] = [];
     const files: ProjectFile[] = [];
 
     for (const entry of tree) {
       if (shouldSkip(entry.path)) continue;
+      if (nameEntry && entry.path === nameEntry.path) continue;
+      if (descEntry && entry.path === descEntry.path) continue;
       const e = ext(entry.path);
       if (IMAGE_EXTS.has(e)) {
         images.push({
@@ -224,8 +253,8 @@ export async function loadProjects(): Promise<Project[]> {
     projects.push({
       slug: repo.name,
       repo: repo.name,
-      title: prettifyName(repo.name),
-      description: repo.description ?? '',
+      title,
+      description,
       repoUrl: repo.html_url,
       defaultBranch: repo.default_branch,
       updatedAt: repo.updated_at,

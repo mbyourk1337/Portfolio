@@ -261,6 +261,7 @@ header.hero p {
   margin: 0;
   color: var(--text-dim);
   font-size: 0.9rem;
+  white-space: pre-line;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -302,6 +303,7 @@ header.hero p {
   color: var(--text);
   margin: 0 0 0.8rem;
   max-width: 70ch;
+  white-space: pre-line;
 }
 .project-hero .meta-row {
   display: flex;
