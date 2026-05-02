@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+
+on:
+  # 1. Пуш в master-репо
+  push:
+    branches: [main]
+  # 2. Ручной запуск из вкладки Actions
+  workflow_dispatch:
+  # 3. Триггер из проект-репо (см. PROJECT_TEMPLATE/README.md)
+  repository_dispatch:
+    types: [project-updated]
+  # 4. Ночью на всякий случай — подхватит изменения, если триггер не сработал
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: withastro/action@v6
+        env:
+          # Подставится из github.repository_owner. Если хотите указать вручную —
+          # задайте переменную в Settings → Secrets and variables → Actions → Variables.
+          GITHUB_USERNAME: ${{ vars.PORTFOLIO_USERNAME || github.repository_owner }}
+          PORTFOLIO_TOPIC: ${{ vars.PORTFOLIO_TOPIC || 'portfolio-project' }}
+          # GITHUB_TOKEN автоматический, поднимает rate limit GitHub API до 5000/час
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

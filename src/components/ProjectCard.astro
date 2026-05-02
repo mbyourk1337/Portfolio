@@ -1,0 +1,66 @@
+---
+import type { Project, FileType } from '../lib/github';
+
+interface Props {
+  project: Project;
+}
+
+const { project } = Astro.props;
+const fileLimit = 5;
+const visibleFiles = project.fileUrls?.slice(0, fileLimit) ?? [];
+const moreFiles = (project.fileUrls?.length ?? 0) - visibleFiles.length;
+
+const TYPE_ICON: Record<FileType, string> = {
+  pdf: '📄',
+  docx: '📝',
+  archive: '🗜',
+  model: '🧊',
+  image: '🖼',
+  video: '🎬',
+  other: '📎',
+};
+---
+
+<article class="card">
+  <a href={project.repoUrl} target="_blank" rel="noopener">
+    {
+      project.coverUrl ? (
+        <div class="cover" style={`background-image: url('${project.coverUrl}')`} />
+      ) : (
+        <div class="cover placeholder">нет обложки</div>
+      )
+    }
+    <div class="body">
+      <h2>{project.title}</h2>
+      <div class="meta">
+        {project.year && <span>{project.year}</span>}
+        <span>{project.repo}</span>
+      </div>
+      {project.description && <p class="desc">{project.description}</p>}
+
+      {
+        visibleFiles.length > 0 && (
+          <div class="files">
+            {visibleFiles.map((f) => (
+              <span class="file-pill">
+                <span class="file-ico">{TYPE_ICON[f.type ?? 'other']}</span>
+                {f.name}
+              </span>
+            ))}
+            {moreFiles > 0 && <span class="file-pill">+{moreFiles}</span>}
+          </div>
+        )
+      }
+
+      {
+        project.tags && project.tags.length > 0 && (
+          <div class="tags">
+            {project.tags.map((t) => (
+              <span class="tag">{t}</span>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  </a>
+</article>

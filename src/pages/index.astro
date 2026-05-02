@@ -1,0 +1,62 @@
+---
+import '../styles/global.css';
+import ProjectCard from '../components/ProjectCard.astro';
+import { loadProjects } from '../lib/github';
+
+const projects = await loadProjects();
+const buildDate = new Date().toISOString().slice(0, 10);
+const avatar = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/avatar.jpg`;
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Пустовойтов Константин — портфолио</title>
+    <meta
+      name="description"
+      content="Портфолио Константина Пустовойтова, студента Московского политеха. Проекты по проектированию."
+    />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <img class="avatar" src={avatar} alt="Пустовойтов Константин" />
+        <div class="hero-text">
+          <h1>Пустовойтов Константин</h1>
+          <ul class="facts">
+            <li>20 лет</li>
+            <li>Москва</li>
+            <li>студент Московского политеха</li>
+          </ul>
+          <p>
+            Проекты по проектированию: чертежи, модели, описания. Каждая карточка
+            ссылается на отдельный GitHub-репозиторий с полными материалами —
+            PDF, архивы, нативные форматы.
+          </p>
+        </div>
+      </header>
+
+      {
+        projects.length === 0 ? (
+          <div class="empty">
+            Пока нет проектов. Создайте репо с топиком{' '}
+            <code>portfolio-project</code> и файлом <code>project.json</code> — он появится здесь
+            после следующего билда.
+          </div>
+        ) : (
+          <section class="grid">
+            {projects.map((p) => (
+              <ProjectCard project={p} />
+            ))}
+          </section>
+        )
+      }
+
+      <footer class="bottom">
+        Собрано {buildDate} · {projects.length} проект(ов)
+      </footer>
+    </main>
+  </body>
+</html>
