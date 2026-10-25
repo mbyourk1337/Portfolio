@@ -1,11 +1,22 @@
 ---
 import '../styles/global.css';
 import ProjectCard from '../components/ProjectCard.astro';
-import { loadProjects } from '../lib/github';
+import SectionCard from '../components/SectionCard.astro';
+import { loadPortfolio } from '../lib/github';
+import { plural } from '../lib/plural';
 
-const projects = await loadProjects();
+const portfolio = await loadPortfolio();
 const buildDate = new Date().toISOString().slice(0, 10);
 const avatar = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/avatar.jpg`;
+
+// Раздел без проектов показываем только если он явно не скрыт —
+// пустая плитка «0 проектов» выглядит как недоделка.
+const visibleSections = portfolio.filter(
+  ({ section, projects }) => projects.length > 0 || section.hideWhenEmpty === false,
+);
+
+const allProjects = portfolio.flatMap((group) => group.projects);
+const recent = allProjects.slice(0, 6);
 ---
 
 <!doctype html>
@@ -16,7 +27,7 @@ const avatar = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/avatar.jpg`;
     <title>Пустовойтов Константин — портфолио</title>
     <meta
       name="description"
-      content="Портфолио Константина Пустовойтова, Московский политех."
+      content="Портфолио Константина Пустовойтова: CAD и инженерия, LLM-агенты и цифровые проекты. Московский политех."
     />
   </head>
   <body>
@@ -75,17 +86,35 @@ const avatar = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/avatar.jpg`;
         </ul>
       </section>
 
-      <section class="projects">
-        <h2 class="section-label">Проекты</h2>
+      <section class="directions">
+        <h2 class="section-label">Направления</h2>
         {
-          projects.length === 0 ? (
+          visibleSections.length === 0 ? (
             <div class="empty">
-              Пока нет проектов. Создайте репо с топиком{' '}
-              <code>portfolio-project</code> — он подтянется сюда автоматически.
+              Пока нет проектов. Поставьте репозиторию топик из{' '}
+              <code>src/data/sections.ts</code> — он появится здесь автоматически.
             </div>
           ) : (
             <div class="grid">
-              {projects.map((p) => (
+              {visibleSections.map(({ section, projects }) => (
+                <SectionCard section={section} count={projects.length} />
+              ))}
+            </div>
+          )
+        }
+      </section>
+
+      <section class="projects">
+        <h2 class="section-label">Последние проекты</h2>
+        {
+          recent.length === 0 ? (
+            <div class="empty">
+              Пока нет проектов. Создайте репо с одним из топиков из{' '}
+              <code>src/data/sections.ts</code> — он подтянется сюда автоматически.
+            </div>
+          ) : (
+            <div class="grid">
+              {recent.map((p) => (
                 <ProjectCard project={p} />
               ))}
             </div>
@@ -94,7 +123,7 @@ const avatar = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/avatar.jpg`;
       </section>
 
       <footer class="bottom">
-        {buildDate} · {projects.length} проект(ов)
+        {buildDate} · {plural(allProjects.length, 'проект', 'проекта', 'проектов')}
       </footer>
     </main>
   </body>

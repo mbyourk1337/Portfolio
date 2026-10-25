@@ -1,0 +1,61 @@
+---
+import '../../styles/global.css';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { loadPortfolio, type Project } from '../../lib/github';
+import type { Section } from '../../data/sections';
+import { plural } from '../../lib/plural';
+
+interface Props {
+  section: Section;
+  projects: Project[];
+}
+
+export async function getStaticPaths() {
+  const portfolio = await loadPortfolio();
+  return portfolio.map(({ section, projects }) => ({
+    params: { section: section.id },
+    props: { section, projects },
+  }));
+}
+
+const { section, projects } = Astro.props as Props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{section.title} — Пустовойтов Константин</title>
+    <meta name="description" content={section.lead} />
+  </head>
+  <body>
+    <main class="container section-page">
+      <nav class="crumbs">
+        <a href={`${base}/`}>все направления</a>
+      </nav>
+
+      <header class="section-head">
+        <h1>{section.title}</h1>
+        <p class="lead">{section.lead}</p>
+        <span class="count">{plural(projects.length, 'проект', 'проекта', 'проектов')}</span>
+      </header>
+
+      {
+        projects.length === 0 ? (
+          <div class="empty">
+            В этом направлении пока нет проектов. Поставьте репозиторию топик{' '}
+            <code>{section.topic}</code> — он появится здесь автоматически.
+          </div>
+        ) : (
+          <div class="grid">
+            {projects.map((project) => (
+              <ProjectCard project={project} />
+            ))}
+          </div>
+        )
+      }
+    </main>
+  </body>
+</html>

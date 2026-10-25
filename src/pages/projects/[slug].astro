@@ -2,6 +2,7 @@
 import '../../styles/global.css';
 import Carousel from '../../components/Carousel.astro';
 import { loadProjects, type FileType } from '../../lib/github';
+import { sectionById } from '../../data/sections';
 
 export async function getStaticPaths() {
   const projects = await loadProjects();
@@ -13,6 +14,8 @@ export async function getStaticPaths() {
 
 const { project } = Astro.props;
 const home = import.meta.env.BASE_URL;
+const base = home.replace(/\/$/, '');
+const section = sectionById(project.section);
 
 const TYPE_ICON: Record<FileType, string> = {
   pdf: '📄',
@@ -45,11 +48,24 @@ const TYPE_LABEL: Record<FileType, string> = {
   </head>
   <body>
     <main class="container project-page">
-      <a class="back" href={home}>← все проекты</a>
+      <nav class="crumbs">
+        <a href={base + '/'}>все направления</a>
+        <span class="sep" aria-hidden="true">/</span>
+        <a href={`${base}/${section.id}/`}>{section.title}</a>
+      </nav>
 
       <header class="project-hero">
         <h1>{project.title}</h1>
         {project.description && <p class="lead">{project.description}</p>}
+        {
+          project.tags.length > 0 && (
+            <ul class="tags">
+              {project.tags.map((tag) => (
+                <li class="tag">{tag}</li>
+              ))}
+            </ul>
+          )
+        }
         <div class="meta-row">
           <a href={project.repoUrl} target="_blank" rel="noopener">github.com/{project.repo}</a>
           <span>·</span>

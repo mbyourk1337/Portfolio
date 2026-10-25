@@ -313,14 +313,26 @@ header.hero .contacts svg {
 
 /* ── Project page ───────────────────────────────────────── */
 
-.project-page .back {
-  display: inline-block;
-  color: var(--text-dim);
-  font-size: 0.9rem;
+/* ── Breadcrumbs ────────────────────────────────────────── */
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
   margin-bottom: 2rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
 }
-.project-page .back:hover {
+.crumbs a {
+  color: var(--text-dim);
+  transition: color 0.15s ease;
+}
+.crumbs a:hover {
   color: var(--text);
+}
+.crumbs .sep {
+  color: var(--border);
 }
 
 .project-hero {
@@ -497,4 +509,131 @@ footer.bottom {
   border-radius: var(--radius);
   padding: 2rem;
   text-align: center;
+}
+
+/* ── Directions (разделы на главной) ────────────────────── */
+
+.directions {
+  margin: 0 0 3.5rem;
+}
+
+.directions .grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.direction {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.3rem 1.4rem 1.35rem;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.direction:hover {
+  transform: translateY(-2px);
+  background: var(--bg-hover);
+  border-color: #3a3a44;
+}
+
+.direction-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.direction h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.direction .arrow {
+  color: var(--text-dim);
+  transition:
+    transform 0.18s ease,
+    color 0.18s ease;
+}
+
+.direction:hover .arrow {
+  color: var(--text);
+  transform: translateX(3px);
+}
+
+.direction .lead {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.direction .count {
+  margin-top: auto;
+  padding-top: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Section page ───────────────────────────────────────── */
+
+.section-head {
+  margin: 0 0 2.5rem;
+}
+
+.section-head h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.6rem;
+}
+
+.section-head .lead {
+  margin: 0 0 0.6rem;
+  color: var(--text-dim);
+  max-width: 60ch;
+}
+
+.section-head .count {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tags ───────────────────────────────────────────────── */
+
+.tags {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+}
+
+.tag {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  padding: 0.2rem 0.55rem;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  border-radius: 6px;
+}
+
+.tag-more {
+  color: var(--text-dim);
+}
+
+.card .tags {
+  margin: 0.1rem 0;
+}
+
+.project-hero .tags {
+  margin: 0.2rem 0 0.9rem;
 }

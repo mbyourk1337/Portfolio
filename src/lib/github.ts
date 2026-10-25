@@ -1,12 +1,19 @@
 // Тянет проекты с GitHub во время билда.
-// На входе ничего, кроме топика, не нужно: имя проекта = имя репо,
-// описание = description репо, картинки и файлы — всё что есть в дереве.
+// Раздел проекта задаётся топиком репозитория (см. src/data/sections.ts),
+// название, описание и теги — файлами name / desc / tags в корне репо.
+
+import {
+  sections,
+  isPortfolioRepo,
+  sectionForTopics,
+  type Section,
+} from '../data/sections';
 
 const USERNAME = import.meta.env.GITHUB_USERNAME ?? 'mbyourk1337';
-const TOPIC = import.meta.env.PORTFOLIO_TOPIC ?? 'portfolio-project';
 const TOKEN = import.meta.env.GITHUB_TOKEN;
 
 const API = 'https://api.github.com';
+const MAX_TAGS = 6;
 
 export type FileType =
   | 'pdf'
@@ -90,11 +97,20 @@ export interface Project {
   repo: string;
   title: string;
   description: string;
+  tags: string[];
+  /** id раздела из src/data/sections.ts */
+  section: string;
   repoUrl: string;
   defaultBranch: string;
   updatedAt: string;
   images: ProjectImage[];
   files: ProjectFile[];
+}
+
+/** Раздел вместе с его проектами — то, из чего собираются главная и разделы. */
+export interface SectionGroup {
+  section: Section;
+  projects: Project[];
 }
 
 interface RepoSearchResult {
@@ -156,14 +172,26 @@ function shouldSkip(path: string): boolean {
 }
 
 async function searchRepos(): Promise<RepoSearchResult[]> {
-  const q = encodeURIComponent(`user:${USERNAME} topic:${TOPIC} fork:false`);
+  // Один запрос на все публичные репо аккаунта: раздел определяется по
+  // топикам уже локально. Искать отдельно по каждому топику (search API
+  // разрешает 30 запросов в минуту) смысла нет — при росте числа
+  // направлений это лишние запросы на каждый билд.
+  const q = encodeURIComponent(`user:${USERNAME} fork:false`);
   const res = await fetch(`${API}/search/repositories?q=${q}&per_page=100`, {
     headers: headers(),
   });
   if (!res.ok) {
     throw new Error(`GitHub search failed: ${res.status} ${await res.text()}`);
   }
-  const json = (await res.json()) as { items: RepoSearchResult[] };
+  const json = (await res.json()) as {
+    total_count: number;
+    items: RepoSearchResult[];
+  };
+  if (json.total_count > json.items.length) {
+    console.warn(
+      `[search] у аккаунта ${json.total_count} репозиториев, получено ${json.items.length} — часть проектов может не попасть на сайт`,
+    );
+  }
   return json.items;
 }
 
@@ -188,9 +216,12 @@ async function fetchTree(repo: RepoSearchResult): Promise<TreeEntry[]> {
 // Поддерживаются: name, name.txt, name.md, name.text (и Name.TXT, NAME.md и т.п.)
 const DESC_RE = /^desc(\.(md|txt|text))?$/i;
 const NAME_RE = /^name(\.(md|txt|text))?$/i;
+const TAGS_RE = /^tags(\.(md|txt|text))?$/i;
 
 async function fetchText(rawBase: string, path: string): Promise<string | null> {
-  const res = await fetch(`${rawBase}/${path}`, { headers: headers() });
+  // Сырые файлы GitHub отдаёт без авторизации и с щедрыми лимитами,
+  // поэтому токен сюда не отправляем.
+  const res = await fetch(`${rawBase}/${path}`);
   if (!res.ok) return null;
   const text = await res.text();
   return text.trim() || null;
@@ -200,72 +231,121 @@ function firstLine(s: string): string {
   return s.split(/\r?\n/, 1)[0].trim();
 }
 
-export async function loadProjects(): Promise<Project[]> {
-  const repos = await searchRepos();
-  const projects: Project[] = [];
-
-  for (const repo of repos) {
-    const tree = await fetchTree(repo);
-    const rawBase = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}`;
-    const blobBase = `${repo.html_url}/blob/${repo.default_branch}`;
-
-    // Название: первая строка файла name / name.md / name.txt — иначе
-    // причёсанное имя репо. Описание: содержимое файла desc / desc.md / desc.txt
-    // целиком — иначе фолбэк на About.
-    const nameEntry = tree.find((e) => NAME_RE.test(e.path));
-    const descEntry = tree.find((e) => DESC_RE.test(e.path));
-
-    const nameContent = nameEntry ? await fetchText(rawBase, nameEntry.path) : null;
-    const descContent = descEntry ? await fetchText(rawBase, descEntry.path) : null;
-
-    const title = nameContent ? firstLine(nameContent) : prettifyName(repo.name);
-    const description = descContent ?? repo.description ?? '';
-
-    const images: ProjectImage[] = [];
-    const files: ProjectFile[] = [];
-
-    for (const entry of tree) {
-      if (shouldSkip(entry.path)) continue;
-      if (nameEntry && entry.path === nameEntry.path) continue;
-      if (descEntry && entry.path === descEntry.path) continue;
-      const e = ext(entry.path);
-      if (IMAGE_EXTS.has(e)) {
-        images.push({
-          path: entry.path,
-          url: `${rawBase}/${entry.path}`,
-          alt: basename(entry.path),
-        });
-      } else {
-        files.push({
-          path: entry.path,
-          name: basename(entry.path),
-          type: EXT_TO_TYPE[e] ?? 'other',
-          size: entry.size ?? 0,
-          sizeLabel: fmtSize(entry.size),
-          url: `${rawBase}/${entry.path}`,
-          viewUrl: `${blobBase}/${entry.path}`,
-        });
-      }
-    }
-
-    images.sort((a, b) => a.path.localeCompare(b.path));
-    files.sort((a, b) => a.path.localeCompare(b.path));
-
-    projects.push({
-      slug: repo.name,
-      repo: repo.name,
-      title,
-      description,
-      repoUrl: repo.html_url,
-      defaultBranch: repo.default_branch,
-      updatedAt: repo.updated_at,
-      images,
-      files,
-    });
+function parseTags(text: string | null): string[] {
+  if (!text) return [];
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    // Разрешаем писать как чистым списком, так и маркированным.
+    const tag = line.replace(/^\s*[-*•]\s*/, '').trim();
+    if (!tag) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tags.push(tag);
+    if (tags.length === MAX_TAGS) break;
   }
+  return tags;
+}
+
+async function loadProject(repo: RepoSearchResult): Promise<Project> {
+  const tree = await fetchTree(repo);
+  const rawBase = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}`;
+  const blobBase = `${repo.html_url}/blob/${repo.default_branch}`;
+
+  // Название: первая строка файла name / name.md / name.txt — иначе
+  // причёсанное имя репо. Описание: содержимое файла desc / desc.md / desc.txt
+  // целиком — иначе фолбэк на About. Теги: файл tags, по строке на тег.
+  const nameEntry = tree.find((e) => NAME_RE.test(e.path));
+  const descEntry = tree.find((e) => DESC_RE.test(e.path));
+  const tagsEntry = tree.find((e) => TAGS_RE.test(e.path));
+
+  const [nameContent, descContent, tagsContent] = await Promise.all([
+    nameEntry ? fetchText(rawBase, nameEntry.path) : null,
+    descEntry ? fetchText(rawBase, descEntry.path) : null,
+    tagsEntry ? fetchText(rawBase, tagsEntry.path) : null,
+  ]);
+
+  const title = nameContent ? firstLine(nameContent) : prettifyName(repo.name);
+  const description = descContent ?? repo.description ?? '';
+
+  const serviceEntries = new Set(
+    [nameEntry?.path, descEntry?.path, tagsEntry?.path].filter(Boolean) as string[],
+  );
+
+  const images: ProjectImage[] = [];
+  const files: ProjectFile[] = [];
+
+  for (const entry of tree) {
+    if (serviceEntries.has(entry.path)) continue;
+    if (shouldSkip(entry.path)) continue;
+    const e = ext(entry.path);
+    if (IMAGE_EXTS.has(e)) {
+      images.push({
+        path: entry.path,
+        url: `${rawBase}/${entry.path}`,
+        alt: basename(entry.path),
+      });
+    } else {
+      files.push({
+        path: entry.path,
+        name: basename(entry.path),
+        type: EXT_TO_TYPE[e] ?? 'other',
+        size: entry.size ?? 0,
+        sizeLabel: fmtSize(entry.size),
+        url: `${rawBase}/${entry.path}`,
+        viewUrl: `${blobBase}/${entry.path}`,
+      });
+    }
+  }
+
+  images.sort((a, b) => a.path.localeCompare(b.path));
+  files.sort((a, b) => a.path.localeCompare(b.path));
+
+  return {
+    slug: repo.name,
+    repo: repo.name,
+    title,
+    description,
+    tags: parseTags(tagsContent),
+    section: sectionForTopics(repo.topics).id,
+    repoUrl: repo.html_url,
+    defaultBranch: repo.default_branch,
+    updatedAt: repo.updated_at,
+    images,
+    files,
+  };
+}
+
+async function buildPortfolio(): Promise<SectionGroup[]> {
+  const repos = await searchRepos();
+  const portfolioRepos = repos.filter((r) => isPortfolioRepo(r.topics));
+
+  const projects = await Promise.all(portfolioRepos.map(loadProject));
 
   // Сортировка: свежее обновлённые — выше.
   projects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-  return projects;
+  return sections.map((section) => ({
+    section,
+    projects: projects.filter((p) => p.section === section.id),
+  }));
+}
+
+// Кэш на время работы процесса: без него каждая страница заново дёргает
+// GitHub API. В dev это особенно чувствительно — у search API лимит
+// 30 запросов в минуту. Минус: правки в проект-репо подхватываются
+// после перезапуска `npm run dev`.
+let cached: Promise<SectionGroup[]> | undefined;
+
+/** Все разделы с проектами. Разделы без проектов тоже присутствуют. */
+export function loadPortfolio(): Promise<SectionGroup[]> {
+  cached ??= buildPortfolio();
+  return cached;
+}
+
+/** Плоский список всех проектов. */
+export async function loadProjects(): Promise<Project[]> {
+  const groups = await loadPortfolio();
+  return groups.flatMap((g) => g.projects);
 }

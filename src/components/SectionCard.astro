@@ -1,0 +1,22 @@
+---
+import type { Section } from '../data/sections';
+import { plural } from '../lib/plural';
+
+interface Props {
+  section: Section;
+  count: number;
+}
+
+const { section, count } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const href = `${base}/${section.id}/`;
+---
+
+<a class="direction" href={href}>
+  <div class="direction-head">
+    <h2>{section.title}</h2>
+    <span class="arrow" aria-hidden="true">→</span>
+  </div>
+  <p class="lead">{section.lead}</p>
+  <span class="count">{plural(count, 'проект', 'проекта', 'проектов')}</span>
+</a>

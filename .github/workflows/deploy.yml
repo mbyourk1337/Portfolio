@@ -33,8 +33,8 @@ jobs:
         env:
           # Подставится из github.repository_owner. Если хотите указать вручную —
           # задайте переменную в Settings → Secrets and variables → Actions → Variables.
+          # Список разделов и их топики живут в src/data/sections.ts.
           GITHUB_USERNAME: ${{ vars.PORTFOLIO_USERNAME || github.repository_owner }}
-          PORTFOLIO_TOPIC: ${{ vars.PORTFOLIO_TOPIC || 'portfolio-project' }}
           # GITHUB_TOKEN автоматический, поднимает rate limit GitHub API до 5000/час
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

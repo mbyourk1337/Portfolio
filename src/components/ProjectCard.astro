@@ -1,5 +1,6 @@
 ---
 import type { Project } from '../lib/github';
+import { plural } from '../lib/plural';
 
 interface Props {
   project: Project;
@@ -11,6 +12,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const href = `${base}/projects/${project.slug}`;
 const fileCount = project.files.length;
 const photoCount = project.images.length;
+const visibleTags = project.tags.slice(0, 3);
+const extraTags = project.tags.length - visibleTags.length;
 ---
 
 <article class="card">
@@ -25,9 +28,19 @@ const photoCount = project.images.length;
     <div class="body">
       <h2>{project.title}</h2>
       {project.description && <p class="desc">{project.description}</p>}
+      {
+        project.tags.length > 0 && (
+          <ul class="tags">
+            {visibleTags.map((tag) => (
+              <li class="tag">{tag}</li>
+            ))}
+            {extraTags > 0 && <li class="tag tag-more">+{extraTags}</li>}
+          </ul>
+        )
+      }
       <div class="counts">
         {photoCount > 0 && <span>🖼 {photoCount} фото</span>}
-        {fileCount > 0 && <span>📎 {fileCount} файл(ов)</span>}
+        {fileCount > 0 && <span>📎 {plural(fileCount, 'файл', 'файла', 'файлов')}</span>}
       </div>
     </div>
   </a>
