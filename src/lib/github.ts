@@ -8,6 +8,7 @@ import {
   sectionForTopics,
   type Section,
 } from '../data/sections';
+import { statusForTopics, type ProjectStatus } from '../data/statuses';
 
 const USERNAME = import.meta.env.GITHUB_USERNAME ?? 'mbyourk1337';
 const TOKEN = import.meta.env.GITHUB_TOKEN;
@@ -100,6 +101,8 @@ export interface Project {
   tags: string[];
   /** id раздела из src/data/sections.ts */
   section: string;
+  /** Состояние проекта из топика status-* или null, если не задано. */
+  status: ProjectStatus | null;
   repoUrl: string;
   defaultBranch: string;
   updatedAt: string;
@@ -309,6 +312,7 @@ async function loadProject(repo: RepoSearchResult): Promise<Project> {
     description,
     tags: parseTags(tagsContent),
     section: sectionForTopics(repo.topics).id,
+    status: statusForTopics(repo.topics),
     repoUrl: repo.html_url,
     defaultBranch: repo.default_branch,
     updatedAt: repo.updated_at,

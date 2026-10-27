@@ -17,6 +17,11 @@ const extraTags = project.tags.length - visibleTags.length;
 ---
 
 <article class="card">
+  {
+    project.status && (
+      <span class={`status-badge status-badge--${project.status.id}`}>{project.status.label}</span>
+    )
+  }
   <a href={href}>
     {
       cover ? (

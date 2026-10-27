@@ -56,6 +56,13 @@ const TYPE_LABEL: Record<FileType, string> = {
 
       <header class="project-hero">
         <h1>{project.title}</h1>
+        {
+          project.status && (
+            <span class={`status-badge status-badge--${project.status.id}`}>
+              {project.status.label}
+            </span>
+          )
+        }
         {project.description && <p class="lead">{project.description}</p>}
         {
           project.tags.length > 0 && (
